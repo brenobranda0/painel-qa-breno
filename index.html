@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="pt-pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QA Study Dash - 90 Dias</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@500&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+        }
+
+        .font-mono-clock {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 10px;
+        }
+
+        .tab-active {
+            border-bottom: 2px solid #38bdf8;
+            color: #38bdf8;
+        }
+
+        .checkbox-custom:checked + label {
+            text-decoration: line-through;
+            color: #94a3b8;
+        }
+        
+        .calendar-day {
+            width: 24px;
+            height: 24px;
+            font-size: 10px;
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #ef4444;
+            border-radius: 50%;
+            display: inline-block;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-12">
+
+    <!-- Cabeçalho -->
+    <header class="p-6 border-b border-slate-800 bg-slate-900/50 sticky top-0 z-50 backdrop-blur-md">
+        <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <h1 class="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
+                    QA Master Dash
+                </h1>
+                <div class="hidden md:flex items-center gap-2 px-3 py-1 bg-slate-800 rounded-full border border-slate-700">
+                    <span class="pulse-dot"></span>
+                    <span id="liveClock" class="text-sm font-mono-clock text-cyan-400">00:00:00</span>
+                </div>
+            </div>
+            <div class="flex gap-4 items-center">
+                <div class="md:hidden flex items-center gap-2 px-3 py-1 bg-slate-800 rounded-full border border-slate-700">
+                    <span id="liveClockMobile" class="text-sm font-mono-clock text-cyan-400">00:00:00</span>
+                </div>
+                <button onclick="exportData()" class="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-700 transition">Exportar</button>
+                <label class="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-700 transition cursor-pointer">
+                    Importar <input type="file" id="importFile" class="hidden" onchange="importData(event)">
+                </label>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Coluna Esquerda: Checklist e Assistente -->
+        <div class="lg:col-span-4 space-y-6">
+            
+            <!-- Checklist Diário -->
+            <section class="glass-card p-5">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="font-semibold text-lg flex items-center gap-2">
+                        <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+                        Foco de Hoje
+                    </h2>
+                    <span id="currentDate" class="text-xs text-slate-400 font-medium"></span>
+                </div>
+                
+                <div class="space-y-3 mb-5" id="dailyChecklist">
+                    <div class="flex items-center gap-3 bg-slate-800/50 p-3 rounded-lg border border-slate-700/50">
+                        <input type="checkbox" id="item1" class="w-5 h-5 rounded accent-cyan-500 checkbox-custom cursor-pointer" onchange="saveChecklist()">
+                        <label for="item1" class="text-sm cursor-pointer flex-1">Estudei (QA/Postman/Cypress)</label>
+                    </div>
+                    <div class="flex items-center gap-3 bg-slate-800/50 p-3 rounded-lg border border-slate-700/50">
+                        <input type="checkbox" id="item2" class="w-5 h-5 rounded accent-cyan-500 checkbox-custom cursor-pointer" onchange="saveChecklist()">
+                        <label for="item2" class="text-sm cursor-pointer flex-1">Projeto (Evoluí repositório)</label>
+                    </div>
+                    <div class="flex items-center gap-3 bg-slate-800/50 p-3 rounded-lg border border-slate-700/50">
+                        <input type="checkbox" id="item3" class="w-5 h-5 rounded accent-cyan-500 checkbox-custom cursor-pointer" onchange="saveChecklist()">
+                        <label for="item3" class="text-sm cursor-pointer flex-1">Vagas (5 candidaturas)</label>
+                    </div>
+                    <div class="flex items-center gap-3 bg-slate-800/50 p-3 rounded-lg border border-slate-700/50">
+                        <input type="checkbox" id="item4" class="w-5 h-5 rounded accent-cyan-500 checkbox-custom cursor-pointer" onchange="saveChecklist()">
+                        <label for="item4" class="text-sm cursor-pointer flex-1">Treino Físico (Noite)</label>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="markAllDone()" class="bg-cyan-600 hover:bg-cyan-500 text-white text-sm font-medium py-2 rounded-lg transition">Marcar Tudo</button>
+                    <button onclick="saveDayToHistory()" class="bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium py-2 rounded-lg transition">Salvar Dia</button>
+                </div>
+            </section>
+
+            <!-- Assistente Local -->
+            <section class="glass-card p-5">
+                <h2 class="font-semibold text-lg mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    Assistente Local
+                </h2>
+                <div id="assistantResponse" class="text-xs bg-slate-900 p-3 rounded-lg mb-4 border border-slate-700 min-h-[60px] leading-relaxed text-slate-300 italic">
+                    "Olá! Pergunta-me 'o que faço agora?' para eu te guiar."
+                </div>
+                <div class="flex gap-2">
+                    <input type="text" id="assistantInput" placeholder="Ex: o que faço agora?" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm flex-1 focus:outline-none focus:ring-1 focus:ring-cyan-500">
+                    <button onclick="askAssistant()" class="bg-slate-700 hover:bg-slate-600 p-2 rounded-lg transition">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                    </button>
+                </div>
+            </section>
+        </div>
+
+        <!-- Coluna Direita: Dashboard e Conteúdo Principal -->
+        <div class="lg:col-span-8 space-y-6">
+            
+            <!-- Dashboard Stats -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="glass-card p-4 text-center">
+                    <p class="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">Progresso</p>
+                    <p id="statProgress" class="text-2xl font-bold text-cyan-400">0%</p>
+                </div>
+                <div class="glass-card p-4 text-center">
+                    <p class="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">Streak</p>
+                    <p id="statStreak" class="text-2xl font-bold text-orange-400">0</p>
+                </div>
+                <div class="glass-card p-4 text-center">
+                    <p class="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">Dias 4/4</p>
+                    <p id="statCompleted" class="text-2xl font-bold text-emerald-400">0</p>
+                </div>
+                <div class="glass-card p-4 text-center">
+                    <p class="text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">Consistência</p>
+                    <p id="statConsistency" class="text-2xl font-bold text-blue-400">0%</p>
+                </div>
+            </div>
+
+            <!-- Gráfico e Calendário Mini -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="glass-card p-5 md:col-span-2">
+                    <h3 class="text-sm font-semibold mb-4 text-slate-400 uppercase">Performance (Pontos diários)</h3>
+                    <div class="h-[200px] w-full">
+                        <canvas id="performanceChart"></canvas>
+                    </div>
+                </div>
+                <div class="glass-card p-5">
+                    <h3 class="text-sm font-semibold mb-4 text-slate-400 uppercase">Últimos 14 Dias</h3>
+                    <div id="miniCalendar" class="grid grid-cols-7 gap-1">
+                        <!-- Gerado via JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabs de Conteúdo -->
+            <div class="glass-card">
+                <div class="flex border-b border-slate-700">
+                    <button onclick="switchTab('tasks')" id="tabBtnTasks" class="flex-1 py-3 text-sm font-medium tab-active transition">Planeamento</button>
+                    <button onclick="switchTab('notes')" id="tabBtnNotes" class="flex-1 py-3 text-sm font-medium text-slate-400 transition">Rascunhos</button>
+                    <button onclick="switchTab('settings')" id="tabBtnSettings" class="flex-1 py-3 text-sm font-medium text-slate-400 transition">Definições</button>
+                </div>
+
+                <div class="p-6">
+                    <!-- Tab: Planeamento (Semanas) -->
+                    <div id="tabContentTasks" class="space-y-6">
+                        <div class="flex justify-between items-center mb-2">
+                            <div class="flex gap-2">
+                                <button onclick="showWeek(1)" id="week1Btn" class="px-4 py-1.5 rounded-full bg-cyan-600 text-xs font-bold transition">Semana 1</button>
+                                <button onclick="showWeek(2)" id="week2Btn" class="px-4 py-1.5 rounded-full bg-slate-800 text-xs font-bold hover:bg-slate-700 transition">Semana 2</button>
+                                <div id="extraWeeksBtns" class="flex gap-2"></div>
+                            </div>
+                            <button onclick="createNewWeek()" class="p-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-cyan-400 transition" title="Criar Semana 3+">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                            </button>
+                        </div>
+
+                        <div id="weekTasksContainer" class="space-y-4">
+                            <!-- Inserido via JS -->
+                        </div>
+                    </div>
+
+                    <!-- Tab: Rascunhos -->
+                    <div id="tabContentNotes" class="hidden space-y-6">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Notas do Dia (Auto-save)</label>
+                            <textarea id="notesArea" placeholder="Hoje eu fiz:&#10;Bloqueado em:&#10;Amanhã vou fazer:" 
+                                class="w-full h-40 bg-slate-900 border border-slate-700 rounded-xl p-4 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500 custom-scrollbar" 
+                                oninput="autoSave('notesArea')"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Rascunho Livre / Scrapbook</label>
+                            <textarea id="draftArea" placeholder="Cola aqui links, códigos ou ideias rápidas..." 
+                                class="w-full h-40 bg-slate-900 border border-slate-700 rounded-xl p-4 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500 custom-scrollbar" 
+                                oninput="autoSave('draftArea')"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Definições -->
+                    <div id="tabContentSettings" class="hidden space-y-6 text-center py-10">
+                        <p class="text-slate-400 text-sm">Atenção: Estas ações são irreversíveis.</p>
+                        <div class="flex flex-col gap-4 max-w-xs mx-auto">
+                            <button onclick="resetApp()" class="bg-red-900/30 hover:bg-red-900/50 text-red-400 border border-red-800/50 py-2 rounded-lg text-sm transition font-semibold">Resetar Todo o Progresso</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // --- ESTADO INICIAL ---
+        let state = {
+            checklist: [false, false, false, false],
+            history: [], 
+            weeklyTasks: {
+                1: [
+                    { text: "Criar repositório 'projeto-qa-completo'", done: false },
+                    { text: "Escrita de 10 casos de teste de Login", done: false },
+                    { text: "Abrir 3 Bug Reports no GitHub Issues", done: false },
+                    { text: "Postman Básico: GET/POST + Status Codes", done: false },
+                    { text: "Revisar README + Adicionar prints iniciais", done: false },
+                    { text: "Meta: 25 candidaturas (5/dia)", done: false }
+                ],
+                2: [
+                    { text: "Coleção Postman Auth + JSON no repo", done: false },
+                    { text: "6 Testes de API (200/400/401) + Prints", done: false },
+                    { text: "Setup inicial Cypress no repositório", done: false },
+                    { text: "2 Testes E2E: Login Sucesso e Falha", done: false },
+                    { text: "README: Como correr + Evidências de testes", done: false },
+                    { text: "Meta: 25 candidaturas (Finalizar semana)", done: false }
+                ]
+            },
+            notes: "",
+            draft: "",
+            currentWeek: 1
+        };
+
+        const STORAGE_KEY = 'qa_study_dash_v1';
+        let chartInstance = null;
+
+        // --- INICIALIZAÇÃO ---
+        window.onload = () => {
+            loadFromStorage();
+            startLiveDateTime();
+            renderAll();
+            tryInitChart();
+        };
+
+        // Função para atualizar Relógio e Calendário (Data) em Tempo Real
+        function startLiveDateTime() {
+            const update = () => {
+                const now = new Date();
+                
+                // Atualiza o Relógio
+                const timeString = now.toLocaleTimeString('pt-PT', { hour12: false });
+                document.getElementById('liveClock').innerText = timeString;
+                document.getElementById('liveClockMobile').innerText = timeString;
+
+                // Atualiza a Data (apenas se mudar o dia, mas rodamos aqui para simplicidade)
+                const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                document.getElementById('currentDate').innerText = now.toLocaleDateString('pt-PT', dateOptions);
+            };
+            
+            update();
+            setInterval(update, 1000);
+        }
+
+        function tryInitChart() {
+            if (typeof Chart !== 'undefined') {
+                initChart();
+            } else {
+                setTimeout(tryInitChart, 500);
+            }
+        }
+
+        // --- RENDERIZAÇÃO ---
+        function renderAll() {
+            renderChecklist();
+            renderStats();
+            renderWeeklyTasks();
+            renderMiniCalendar();
+            document.getElementById('notesArea').value = state.notes || "";
+            document.getElementById('draftArea').value = state.draft || "";
+        }
+
+        function renderChecklist() {
+            state.checklist.forEach((val, i) => {
+                const el = document.getElementById(`item${i+1}`);
+                if (el) el.checked = val;
+            });
+        }
+
+        function renderStats() {
+            let totalTasks = 0;
+            let doneTasks = 0;
+            Object.values(state.weeklyTasks).forEach(week => {
+                totalTasks += week.length;
+                doneTasks += week.filter(t => t.done).length;
+            });
+            const progress = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
+            document.getElementById('statProgress').innerText = `${progress}%`;
+
+            const fullDays = state.history.filter(h => h.score === 4).length;
+            document.getElementById('statCompleted').innerText = fullDays;
+
+            document.getElementById('statStreak').innerText = calculateStreak();
+            document.getElementById('statConsistency').innerText = calculateConsistency() + "%";
+        }
+
+        function renderWeeklyTasks() {
+            const container = document.getElementById('weekTasksContainer');
+            if (!container) return;
+            const tasks = state.weeklyTasks[state.currentWeek] || [];
+            
+            container.innerHTML = '';
+            tasks.forEach((task, idx) => {
+                const div = document.createElement('div');
+                div.className = "flex items-center gap-3 p-3 bg-slate-800/30 rounded-lg border border-slate-700/50 hover:bg-slate-800/50 transition";
+                div.innerHTML = `
+                    <input type="checkbox" id="wtask-${idx}" ${task.done ? 'checked' : ''} 
+                        class="w-5 h-5 rounded accent-blue-500 checkbox-custom cursor-pointer" 
+                        onchange="toggleWeeklyTask(${idx})">
+                    <label for="wtask-${idx}" class="text-sm cursor-pointer flex-1">${task.text}</label>
+                `;
+                container.appendChild(div);
+            });
+
+            for (let i = 1; i <= 2; i++) {
+                const btn = document.getElementById(`week${i}Btn`);
+                if (btn) {
+                    btn.className = state.currentWeek === i ? 
+                        "px-4 py-1.5 rounded-full bg-cyan-600 text-xs font-bold transition" : 
+                        "px-4 py-1.5 rounded-full bg-slate-800 text-xs font-bold hover:bg-slate-700 transition";
+                }
+            }
+
+            const extraContainer = document.getElementById('extraWeeksBtns');
+            if (extraContainer) {
+                extraContainer.innerHTML = '';
+                Object.keys(state.weeklyTasks).forEach(w => {
+                    if (w > 2) {
+                        const btn = document.createElement('button');
+                        btn.innerText = `S${w}`;
+                        btn.onclick = () => showWeek(parseInt(w));
+                        btn.className = state.currentWeek == w ? 
+                            "px-3 py-1.5 rounded-full bg-cyan-600 text-xs font-bold transition" : 
+                            "px-3 py-1.5 rounded-full bg-slate-800 text-xs font-bold transition";
+                        extraContainer.appendChild(btn);
+                    }
+                });
+            }
+        }
+
+        function renderMiniCalendar() {
+            const container = document.getElementById('miniCalendar');
+            if (!container) return;
+            container.innerHTML = '';
+            
+            const now = new Date();
+            for (let i = 13; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(now.getDate() - i);
+                const dateStr = d.toISOString().split('T')[0];
+                const dayLog = state.history.find(h => h.date === dateStr);
+                
+                let bgColor = 'bg-slate-800';
+                if (dayLog) {
+                    if (dayLog.score === 4) bgColor = 'bg-emerald-500';
+                    else if (dayLog.score > 0) bgColor = 'bg-emerald-800';
+                }
+
+                const div = document.createElement('div');
+                div.className = `calendar-day rounded-sm ${bgColor} flex items-center justify-center transition-all hover:scale-110 cursor-help`;
+                div.title = `${dateStr}: ${dayLog ? dayLog.score : 0}/4`;
+                div.innerText = d.getDate();
+                container.appendChild(div);
+            }
+        }
+
+        // --- LÓGICA DE NEGÓCIO ---
+
+        function markAllDone() {
+            state.checklist = [true, true, true, true];
+            saveChecklist();
+            renderChecklist();
+        }
+
+        function saveDayToHistory() {
+            const score = state.checklist.filter(v => v).length;
+            const dateStr = new Date().toISOString().split('T')[0];
+            
+            const existingIndex = state.history.findIndex(h => h.date === dateStr);
+            if (existingIndex > -1) {
+                state.history[existingIndex].score = score;
+            } else {
+                state.history.push({ date: dateStr, score: score });
+            }
+            
+            saveToStorage();
+            renderStats();
+            renderMiniCalendar();
+            updateChart();
+            showToast("Dia registado no histórico!");
+        }
+
+        function toggleWeeklyTask(idx) {
+            state.weeklyTasks[state.currentWeek][idx].done = !state.weeklyTasks[state.currentWeek][idx].done;
+            saveToStorage();
+            renderStats();
+        }
+
+        function showWeek(w) {
+            state.currentWeek = w;
+            renderWeeklyTasks();
+        }
+
+        function createNewWeek() {
+            const nextWeek = Object.keys(state.weeklyTasks).length + 1;
+            state.weeklyTasks[nextWeek] = [
+                { text: `Tarefa padrão 1 da Semana ${nextWeek}`, done: false },
+                { text: `Tarefa padrão 2 da Semana ${nextWeek}`, done: false },
+                { text: "Estudar novo tópico avançado de QA", done: false },
+                { text: "Continuar candidaturas a vagas", done: false }
+            ];
+            state.currentWeek = nextWeek;
+            saveToStorage();
+            renderWeeklyTasks();
+            showToast(`Semana ${nextWeek} criada!`);
+        }
+
+        function calculateStreak() {
+            if (state.history.length === 0) return 0;
+            const sorted = [...state.history].sort((a, b) => new Date(b.date) - new Date(a.date));
+            let streak = 0;
+            for (let log of sorted) {
+                if (log.score === 4) streak++;
+                else break;
+            }
+            return streak;
+        }
+
+        function calculateConsistency() {
+            if (state.history.length === 0) return 0;
+            const last14 = state.history.slice(-14);
+            const totalScore = last14.reduce((acc, curr) => acc + curr.score, 0);
+            const maxPossible = last14.length * 4;
+            return Math.round((totalScore / maxPossible) * 100);
+        }
+
+        // --- ASSISTENTE ---
+
+        function askAssistant() {
+            const input = document.getElementById('assistantInput').value.toLowerCase();
+            const responseDiv = document.getElementById('assistantResponse');
+            let response = "";
+
+            if (input.includes("que faço") || input.includes("próxima")) {
+                const pendente = state.checklist.findIndex(v => !v);
+                if (pendente !== -1) {
+                    const names = ["Estudar QA", "Evoluir Projeto", "Candidatar-se a Vagas", "Treinar"];
+                    response = `Ainda não marcaste '${names[pendente]}' hoje. Começa por aí!`;
+                } else {
+                    const task = (state.weeklyTasks[state.currentWeek] || []).find(t => !t.done);
+                    response = task ? 
+                        `Hoje estás 4/4! Foca na tarefa da semana: ${task.text}` : 
+                        "Tudo pronto por aqui! Que tal rever o teu LinkedIn?";
+                }
+            } else if (input.includes("vagas") || input.includes("vaga")) {
+                response = "A meta é 5 candidaturas/dia. Procura por 'QA Junior' ou 'Estágio Testes' no LinkedIn.";
+            } else if (input.includes("postman")) {
+                response = "Próximo passo Postman: Cria testes automatizados usando 'pm.test' no separador Tests.";
+            } else if (input.includes("cypress")) {
+                response = "Dica Cypress: Foca em seletores estáveis (data-cy) e aprende a usar 'cy.intercept' para mocking.";
+            } else {
+                response = "Desculpa, ainda estou a aprender. Pergunta-me 'o que faço agora?' ou sobre 'vagas'.";
+            }
+
+            responseDiv.innerText = `"${response}"`;
+            document.getElementById('assistantInput').value = "";
+        }
+
+        // --- CHART.JS ---
+
+        function initChart() {
+            const canvas = document.getElementById('performanceChart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            
+            const labels = [];
+            const dataPoints = [];
+            const now = new Date();
+            for (let i = 20; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(now.getDate() - i);
+                const ds = d.toISOString().split('T')[0];
+                labels.push(d.getDate() + "/" + (d.getMonth()+1));
+                
+                const log = state.history.find(h => h.date === ds);
+                dataPoints.push(log ? log.score : 0);
+            }
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Pontuação',
+                        data: dataPoints,
+                        borderColor: '#38bdf8',
+                        backgroundColor: 'rgba(56, 189, 248, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 3,
+                        pointBackgroundColor: '#38bdf8'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { min: 0, max: 4, grid: { color: '#334155' }, ticks: { stepSize: 1, color: '#94a3b8' } },
+                        x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+                    }
+                }
+            });
+        }
+
+        function updateChart() {
+            if (!chartInstance || typeof Chart === 'undefined') return;
+            const dataPoints = [];
+            const now = new Date();
+            for (let i = 20; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(now.getDate() - i);
+                const ds = d.toISOString().split('T')[0];
+                const log = state.history.find(h => h.date === ds);
+                dataPoints.push(log ? log.score : 0);
+            }
+            chartInstance.data.datasets[0].data = dataPoints;
+            chartInstance.update();
+        }
+
+        // --- STORAGE E UTILITÁRIOS ---
+
+        function saveChecklist() {
+            state.checklist = [
+                document.getElementById('item1').checked,
+                document.getElementById('item2').checked,
+                document.getElementById('item3').checked,
+                document.getElementById('item4').checked
+            ];
+            saveToStorage();
+        }
+
+        function autoSave(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            if (id === 'notesArea') state.notes = el.value;
+            if (id === 'draftArea') state.draft = el.value;
+            saveToStorage();
+        }
+
+        function saveToStorage() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        }
+
+        function loadFromStorage() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                try {
+                    state = JSON.parse(saved);
+                } catch(e) { console.error("Erro ao ler storage", e); }
+            }
+        }
+
+        function switchTab(tab) {
+            const contents = ['Tasks', 'Notes', 'Settings'];
+            contents.forEach(c => {
+                const contentEl = document.getElementById(`tabContent${c}`);
+                const btnEl = document.getElementById(`tabBtn${c.toLowerCase()}`);
+                if (contentEl) contentEl.classList.add('hidden');
+                if (btnEl) {
+                    btnEl.classList.remove('tab-active');
+                    btnEl.classList.add('text-slate-400');
+                }
+            });
+
+            const target = tab.charAt(0).toUpperCase() + tab.slice(1);
+            const targetContent = document.getElementById(`tabContent${target}`);
+            const targetBtn = document.getElementById(`tabBtn${tab}`);
+            if (targetContent) targetContent.classList.remove('hidden');
+            if (targetBtn) {
+                targetBtn.classList.add('tab-active');
+                targetBtn.classList.remove('text-slate-400');
+            }
+        }
+
+        function exportData() {
+            const dataStr = JSON.stringify(state, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', 'qa-study-progress.json');
+            linkElement.click();
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    state = imported;
+                    saveToStorage();
+                    location.reload();
+                } catch (err) {
+                    showToast("Erro ao importar ficheiro!");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function resetApp() {
+            if (confirm("Tens a certeza que desejas apagar TUDO?")) {
+                localStorage.removeItem(STORAGE_KEY);
+                location.reload();
+            }
+        }
+
+        function showToast(msg) {
+            const toast = document.createElement('div');
+            toast.className = "fixed bottom-4 right-4 bg-cyan-600 text-white px-6 py-3 rounded-xl shadow-2xl z-[100] animate-bounce";
+            toast.innerText = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+    </script>
+</body>
+</html>
